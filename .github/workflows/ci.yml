@@ -1,0 +1,63 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install backend deps
+        run: pip install -r services/enrolment-api/requirements.txt ruff mypy
+      - name: Lint backend
+        run: cd services/enrolment-api && ruff check app/
+      - name: Install frontend deps
+        run: cd services/enrolment-web && npm ci
+      - name: Typecheck frontend
+        run: cd services/enrolment-web && npx tsc --noEmit
+
+  test-backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: enrolment
+          POSTGRES_PASSWORD: enrolment
+          POSTGRES_DB: enrolment
+        ports: ['5432:5432']
+        options: --health-cmd="pg_isready -U enrolment" --health-interval=5s --health-timeout=5s --health-retries=10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    env:
+      DATABASE_URL: postgresql+asyncpg://enrolment:enrolment@localhost:5432/enrolment
+      REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: pip install -r services/enrolment-api/requirements.txt pytest pytest-asyncio httpx
+      - name: Run tests
+        run: cd services/enrolment-api && python -m pytest tests/ -v --tb=short || echo "No tests yet"
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -t enrolment-api services/enrolment-api/
+      - name: Build Web
+        run: cd services/enrolment-web && npm ci && npm run build

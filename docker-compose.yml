@@ -1,0 +1,81 @@
+services:
+  enrolment-api:
+    build:
+      context: ./services/enrolment-api
+      dockerfile: Dockerfile
+    container_name: enrolment-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://enrolment:enrolment@enrolment-db:5432/enrolment
+      REDIS_URL: redis://enrolment-redis:6379/0
+      S3_ENDPOINT: http://enrolment-minio:9000
+      SMTP_HOST: enrolment-mailpit
+      SMTP_PORT: "1025"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+    depends_on:
+      enrolment-db:
+        condition: service_healthy
+      enrolment-redis:
+        condition: service_started
+      enrolment-mailpit:
+        condition: service_started
+    volumes:
+      - ./services/enrolment-api:/app
+    restart: unless-stopped
+
+  enrolment-db:
+    image: postgres:16-alpine
+    container_name: enrolment-db
+    environment:
+      POSTGRES_USER: enrolment
+      POSTGRES_PASSWORD: enrolment
+      POSTGRES_DB: enrolment
+    ports:
+      - "5433:5432"
+    volumes:
+      - enrolment_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U enrolment -d enrolment"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  enrolment-redis:
+    image: redis:7-alpine
+    container_name: enrolment-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - enrolment_redis:/data
+    restart: unless-stopped
+
+  # enrolment-minio:
+  #   image: quay.io/minio/minio:latest
+  #   container_name: enrolment-minio
+  #   command: server /data --console-address ":9001"
+  #   environment:
+  #     MINIO_ROOT_USER: minioadmin
+  #     MINIO_ROOT_PASSWORD: minioadmin
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   volumes:
+  #     - enrolment_minio:/data
+  #   restart: unless-stopped
+
+  enrolment-mailpit:
+    image: axllent/mailpit:latest
+    container_name: enrolment-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    restart: unless-stopped
+
+volumes:
+  enrolment_pgdata:
+  enrolment_redis:
