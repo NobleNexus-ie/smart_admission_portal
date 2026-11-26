@@ -12,6 +12,7 @@ from app.models.application import Application
 from app.models.application_school import ApplicationSchool
 from app.models.child import Child
 from app.models.enums import ApplicationSchoolStatus, ApplicationStatus
+from app.models.notification import Notification as NotificationRecord
 from app.models.parent import Parent
 from app.models.parent_profile import ParentProfile
 from app.models.school import School
@@ -231,7 +232,6 @@ class ProfileService:
         info_requested = 0
         action_required: list[dict] = []
         activity: list[dict] = []
-        seen_action_ids: set[UUID] = set()
 
         for app in apps:
             total += 1
@@ -247,18 +247,41 @@ class ProfileService:
                     rejected += 1
                 elif st == ApplicationSchoolStatus.INFO_REQUESTED.value:
                     info_requested += 1
-                    if app.id not in seen_action_ids:
-                        seen_action_ids.add(app.id)
-                        action_required.append({
-                            "id": str(app.id),
-                            "student_full_name": form.get("student_full_name", "Student"),
-                            "school_name": school_name,
-                            "school_id": str(asch.school_id),
-                            "status": st,
-                            "submitted_at": app.submitted_at.isoformat() if app.submitted_at else None,
-                            "created_at": app.created_at.isoformat() if app.created_at else None,
-                            "action_required": True,
-                        })
+
+                action_key = f"{app.id}:{asch.school_id}"
+                if st == ApplicationSchoolStatus.INFO_REQUESTED.value:
+                    action_required.append({
+                        "id": str(app.id),
+                        "student_full_name": form.get("student_full_name", "Student"),
+                        "school_name": school_name,
+                        "school_id": str(asch.school_id),
+                        "status": st,
+                        "submitted_at": app.submitted_at.isoformat() if app.submitted_at else None,
+                        "created_at": app.created_at.isoformat() if app.created_at else None,
+                        "action_required": True,
+                    })
+                elif st == ApplicationSchoolStatus.APPROVED.value:
+                    action_required.append({
+                        "id": str(app.id),
+                        "student_full_name": form.get("student_full_name", "Student"),
+                        "school_name": school_name,
+                        "school_id": str(asch.school_id),
+                        "status": st,
+                        "submitted_at": app.submitted_at.isoformat() if app.submitted_at else None,
+                        "created_at": app.created_at.isoformat() if app.created_at else None,
+                        "action_required": False,
+                    })
+                elif st == ApplicationSchoolStatus.REJECTED.value:
+                    action_required.append({
+                        "id": str(app.id),
+                        "student_full_name": form.get("student_full_name", "Student"),
+                        "school_name": school_name,
+                        "school_id": str(asch.school_id),
+                        "status": st,
+                        "submitted_at": app.submitted_at.isoformat() if app.submitted_at else None,
+                        "created_at": app.created_at.isoformat() if app.created_at else None,
+                        "action_required": False,
+                    })
 
                 ts = asch.reviewed_at or asch.submitted_at or app.created_at
                 status_labels = {
@@ -288,3 +311,87 @@ class ProfileService:
             "recent_activity": activity[:5],
             "action_required": action_required,
         }
+
+    async def get_notifications(self, parent_id: UUID) -> list[dict]:
+        from datetime import timedelta
+
+        now = datetime.now(timezone.utc)
+        recent_cutoff = now - timedelta(days=3)
+        items: list[dict] = []
+
+        apps = (
+            await self.db.scalars(
+                select(Application)
+                .options(
+                    selectinload(Application.application_schools).selectinload(
+                        ApplicationSchool.school
+                    )
+                )
+                .where(Application.parent_id == parent_id)
+                .order_by(Application.created_at.desc())
+            )
+        ).all()
+
+        for app in apps:
+            form = app.form_data or {}
+            student_name = form.get("student_full_name", "Student")
+            for asch in app.application_schools:
+                st = asch.status
+                school_name = asch.school.name if asch.school else "School"
+
+                if st == ApplicationSchoolStatus.PENDING.value:
+                    ts = asch.submitted_at or app.submitted_at or app.created_at
+                    msg = f"Application for {student_name} submitted to {school_name}"
+                    ntype = "submitted"
+                else:
+                    ts = asch.reviewed_at or asch.submitted_at or app.created_at
+                    messages = {
+                        "approved": f"Application for {student_name} approved by {school_name}",
+                        "rejected": f"Application for {student_name} rejected by {school_name}",
+                        "info_requested": f"{school_name} requested more info for {student_name}'s application",
+                    }
+                    msg = messages.get(st, f"Application status changed to {st} at {school_name}")
+                    ntype = st
+
+                items.append({
+                    "id": f"status:{app.id}:{asch.school_id}",
+                    "type": ntype,
+                    "message": msg,
+                    "application_id": str(app.id),
+                    "created_at": ts.isoformat() if ts else now.isoformat(),
+                    "is_read": (ts < recent_cutoff) if ts else True,
+                })
+
+        parent = await self.db.scalar(
+            select(Parent).where(Parent.id == parent_id)
+        )
+        if parent and parent.email:
+            email_notifs = (
+                await self.db.scalars(
+                    select(NotificationRecord)
+                    .where(NotificationRecord.recipient_email == parent.email)
+                    .order_by(NotificationRecord.created_at.desc())
+                    .limit(20)
+                )
+            ).all()
+            for n in email_notifs:
+                meta = n.metadata_ or {}
+                template_labels = {
+                    "application_received": "Application confirmation email sent",
+                    "status_update": "Status update email sent",
+                    "info_request": "Info request email sent",
+                    "app_received": "Application received by school",
+                    "app_rejected": "Rejection notification email sent",
+                }
+                msg = template_labels.get(n.template, f"Email: {n.template.replace('_', ' ').title()}")
+                items.append({
+                    "id": f"email:{n.id}",
+                    "type": "email_sent" if n.status == "sent" else "email_queued",
+                    "message": msg,
+                    "application_id": meta.get("application_id"),
+                    "created_at": (n.sent_at or n.created_at).isoformat(),
+                    "is_read": ((n.sent_at or n.created_at) < recent_cutoff),
+                })
+
+        items.sort(key=lambda x: x["created_at"], reverse=True)
+        return items[:30]

@@ -44,3 +44,11 @@ async def dashboard(
     current: Annotated[dict, Depends(get_current_parent)],
 ):
     return await ProfileService(db).dashboard(parent_id_from(current))
+
+
+@router.get("/notifications")
+async def get_notifications(
+    db: DbSession,
+    current: Annotated[dict, Depends(get_current_parent)],
+):
+    return await ProfileService(db).get_notifications(parent_id_from(current))

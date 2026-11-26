@@ -3,6 +3,7 @@ import { Sidebar, PARENT_NAV } from './Sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { PageLoader } from '@/components/ui/Spinner';
+import { NotificationBell } from '@/components/ui/NotificationBell';
 import { isAuthenticated } from '@/lib/auth';
 
 export function ParentAuthGuard({ children }: { children: React.ReactNode }) {
@@ -40,8 +41,13 @@ export function ParentLayout() {
         userLabel={profile?.full_name || parentUser?.email}
         onLogout={logout}
       />
-      <main className="min-w-0 flex-1 overflow-y-auto">
-        <Outlet />
+      <main className="min-w-0 flex-1 flex flex-col overflow-hidden">
+        <div className="flex shrink-0 items-center justify-end border-b border-slate-100/60 bg-white/70 px-6 py-2 backdrop-blur-sm">
+          <NotificationBell />
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

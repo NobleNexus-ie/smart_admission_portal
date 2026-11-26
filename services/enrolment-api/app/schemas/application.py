@@ -11,6 +11,7 @@ from app.schemas.common import APIModel
 class ApplicationCreateRequest(APIModel):
     school_id: UUID
     form_data: dict[str, Any] = Field(default_factory=dict)
+    method: str | None = None
 
 
 class ApplicationUpdateRequest(APIModel):

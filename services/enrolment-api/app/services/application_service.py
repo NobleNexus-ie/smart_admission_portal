@@ -90,8 +90,10 @@ class ApplicationService:
             "info_requests": info_requests,
         }
 
-    async def create(self, parent_id: UUID, school_id: UUID, form_data: dict) -> dict:
-        await ProfileService(self.db).ensure_profile_complete(parent_id)
+    async def create(self, parent_id: UUID, school_id: UUID, form_data: dict, *, method: str | None = None) -> dict:
+        is_chatbot = method == ApplicationMethod.AGENTIC.value
+        if not is_chatbot:
+            await ProfileService(self.db).ensure_profile_complete(parent_id)
 
         school = await self.db.get(School, school_id)
         if not school:
@@ -99,29 +101,34 @@ class ApplicationService:
         if school.status != SchoolStatus.ACTIVE.value:
             raise AppError(403, "This school is not currently accepting applications")
 
-        # One pending/submitted per parent+school
-        dup = await self.db.scalar(
-            select(ApplicationSchool)
-            .join(Application)
-            .where(
-                Application.parent_id == parent_id,
-                ApplicationSchool.school_id == school_id,
-                ApplicationSchool.status.in_(
-                    [
-                        ApplicationSchoolStatus.PENDING.value,
-                        ApplicationSchoolStatus.INFO_REQUESTED.value,
-                    ]
-                ),
+        # One pending/submitted per parent+school+student
+        student_name = (form_data or {}).get("student_full_name", "").strip().lower()
+        existing = (
+            await self.db.scalars(
+                select(Application)
+                .join(ApplicationSchool)
+                .where(
+                    Application.parent_id == parent_id,
+                    ApplicationSchool.school_id == school_id,
+                    ApplicationSchool.status.in_(
+                        [
+                            ApplicationSchoolStatus.PENDING.value,
+                            ApplicationSchoolStatus.INFO_REQUESTED.value,
+                        ]
+                    ),
+                )
             )
-        )
-        if dup:
-            raise AppError(409, "You already have an application for this school")
+        ).all()
+        for ex in existing:
+            ex_name = (ex.form_data or {}).get("student_full_name", "").strip().lower()
+            if ex_name == student_name:
+                raise AppError(409, "You already have an application for this student at this school")
 
         app = Application(
             parent_id=parent_id,
             form_data=form_data or {},
             status=ApplicationStatus.DRAFT.value,
-            method=ApplicationMethod.SCHOOL_FIRST.value,
+            method=ApplicationMethod.AGENTIC.value if is_chatbot else ApplicationMethod.SCHOOL_FIRST.value,
         )
         self.db.add(app)
         await self.db.flush()
@@ -238,8 +245,6 @@ class ApplicationService:
         return DocumentService.to_out(doc)
 
     async def submit(self, application_id: UUID, parent_id: UUID) -> dict:
-        await ProfileService(self.db).ensure_profile_complete(parent_id)
-
         app = await self.db.scalar(
             select(Application)
             .options(
@@ -255,6 +260,9 @@ class ApplicationService:
             raise AppError(404, "Application not found")
         if app.status != ApplicationStatus.DRAFT.value:
             raise AppError(400, "Application has already been submitted")
+
+        if app.method != ApplicationMethod.AGENTIC.value:
+            await ProfileService(self.db).ensure_profile_complete(parent_id)
 
         form = app.form_data or {}
         required = ["student_full_name", "date_of_birth", "gender", "grade_applying_for"]

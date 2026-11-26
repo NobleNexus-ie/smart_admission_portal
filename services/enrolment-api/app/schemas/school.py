@@ -36,6 +36,7 @@ class SchoolUpdateRequest(APIModel):
     facilities: list[str] | None = None
     website_url: str | None = None
     grades_offered: list[str] | None = None
+    required_documents: list[str] | None = None
     logo_url: str | None = None
 
 
@@ -63,6 +64,7 @@ class SchoolResponse(APIModel):
     fee_range: str | None = None
     student_teacher_ratio: str | None = None
     grades_offered: list | None = None
+    required_documents: list | None = None
     website_url: str | None = None
     created_at: datetime | None = None
 

@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { FileUp, X, CheckCircle2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { FileUp, X, CheckCircle2, FileText, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 
@@ -15,6 +15,16 @@ interface DocumentUploadProps {
   disabled?: boolean;
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function isImageFile(file: File): boolean {
+  return file.type.startsWith('image/');
+}
+
 export function DocumentUpload({
   label,
   required,
@@ -28,11 +38,34 @@ export function DocumentUpload({
 }: DocumentUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (value && isImageFile(value)) {
+      const url = URL.createObjectURL(value);
+      setPreview(url);
+      return () => URL.revokeObjectURL(url);
+    }
+    setPreview(null);
+  }, [value]);
 
   const handleFile = (file: File | undefined) => {
     if (!file) return;
+
+    const allowedTypes = accept
+      .split(',')
+      .map((t) => t.trim().toLowerCase());
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    const mimeMatch = allowedTypes.some(
+      (t) => t === ext || file.type.includes(t.replace('.', '')),
+    );
+    if (!mimeMatch) {
+      setLocalError(`Invalid file type. Accepted: ${accept}`);
+      return;
+    }
+
     if (file.size > maxSizeMb * 1024 * 1024) {
-      setLocalError(`File must be under ${maxSizeMb} MB`);
+      setLocalError(`File must be under ${maxSizeMb} MB (yours: ${formatFileSize(file.size)})`);
       return;
     }
     setLocalError(null);
@@ -46,6 +79,9 @@ export function DocumentUpload({
       <p className="field-label">
         {label}
         {required && <span className="ml-0.5 text-red-500">*</span>}
+        {!required && (
+          <span className="ml-1 text-xs font-normal text-slate-400">(Optional)</span>
+        )}
       </p>
       <div
         className={cn(
@@ -56,27 +92,50 @@ export function DocumentUpload({
         )}
       >
         {value || existingUrl ? (
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
-              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-              <span className="truncate">
-                {value?.name || 'Document uploaded'}
-              </span>
-            </div>
-            {!disabled && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  onChange(null);
-                  if (inputRef.current) inputRef.current.value = '';
-                }}
-                aria-label="Remove file"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+          <div className="space-y-3">
+            {preview && (
+              <div className="flex justify-center">
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="h-24 w-24 rounded-lg object-cover border border-slate-200 shadow-sm"
+                />
+              </div>
             )}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
+                {value && isImageFile(value) ? (
+                  <ImageIcon className="h-5 w-5 shrink-0 text-brand-500" />
+                ) : (
+                  <FileText className="h-5 w-5 shrink-0 text-brand-500" />
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">
+                    {value?.name || 'Document uploaded'}
+                  </p>
+                  {value && (
+                    <p className="text-xs text-slate-400">
+                      {value.type.split('/').pop()?.toUpperCase()} · {formatFileSize(value.size)}
+                    </p>
+                  )}
+                </div>
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              </div>
+              {!disabled && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    onChange(null);
+                    if (inputRef.current) inputRef.current.value = '';
+                  }}
+                  aria-label="Remove file"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         ) : (
           <button

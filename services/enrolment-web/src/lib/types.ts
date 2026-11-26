@@ -229,6 +229,7 @@ export interface Application {
 export interface CreateApplicationPayload {
   school_id: string;
   form_data: ApplicationFormData;
+  method?: string;
 }
 
 export interface RespondInfoPayload {

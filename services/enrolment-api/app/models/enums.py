@@ -59,6 +59,13 @@ class DocumentCategory(str, enum.Enum):
     TRANSCRIPT = "transcript"
     MEDICAL = "medical"
     ID_PROOF = "id_proof"
+    TRANSFER_CERTIFICATE = "transfer_certificate"
+    PREVIOUS_MARKSHEET = "previous_marksheet"
+    MIGRATION_CERTIFICATE = "migration_certificate"
+    CHARACTER_CERTIFICATE = "character_certificate"
+    CASTE_CERTIFICATE = "caste_certificate"
+    INCOME_CERTIFICATE = "income_certificate"
+    ADDRESS_PROOF = "address_proof"
     OTHER = "other"
 
 

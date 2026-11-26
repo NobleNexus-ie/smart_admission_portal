@@ -99,4 +99,59 @@ export const staffApi = {
     );
     return detailToApplication(data);
   },
+
+  getSchool: async () => {
+    const { data } = await apiClient.get<StaffSchool>('/staff/school');
+    return data;
+  },
+
+  updateSchool: async (payload: Partial<StaffSchool>) => {
+    const { data } = await apiClient.put<StaffSchool>('/staff/school', payload);
+    return data;
+  },
+
+  listMembers: async () => {
+    const { data } = await apiClient.get<StaffMember[]>('/staff/school/members');
+    return data;
+  },
+
+  inviteMember: async (payload: { email: string; name: string; role: string }) => {
+    const { data } = await apiClient.post<StaffMember>('/staff/school/members', payload);
+    return data;
+  },
+
+  removeMember: async (id: string) => {
+    await apiClient.delete(`/staff/school/members/${id}`);
+  },
 };
+
+export interface StaffSchool {
+  id: string;
+  name: string;
+  board: string;
+  school_type: string | null;
+  address: string;
+  area: string;
+  city: string;
+  state: string;
+  contact_email: string;
+  phone: string | null;
+  description: string | null;
+  logo_url: string | null;
+  status: string;
+  facilities: string[] | null;
+  fee_range: string | null;
+  student_teacher_ratio: string | null;
+  grades_offered: string[] | null;
+  website_url: string | null;
+}
+
+export interface StaffMember {
+  id: string;
+  school_id: string;
+  email: string;
+  name: string;
+  role: string;
+  permissions: string[] | null;
+  created_at: string | null;
+}

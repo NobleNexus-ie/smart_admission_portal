@@ -61,10 +61,13 @@ export function DashboardPage() {
       </FadeIn>
 
       <StaggerContainer className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {STATS.map(({ key, i18n, icon: Icon, gradient }) => (
+        {STATS.map(({ key, i18n, icon: Icon, gradient }) => {
+          const filterParam = key === 'total' ? '' : `?status=${key}`;
+          return (
           <StaggerItem key={key}>
             <ScaleOnHover>
-              <div className="stat-card">
+              <Link to={`/enrolment/applications${filterParam}`} className="block">
+              <div className="stat-card cursor-pointer transition-shadow hover:shadow-card">
                 <div className="relative z-10 flex items-center justify-between">
                   <p className="text-sm font-medium text-slate-500">{t(i18n)}</p>
                   <div className={`rounded-xl bg-gradient-to-br ${gradient} p-2 shadow-sm`}>
@@ -75,9 +78,11 @@ export function DashboardPage() {
                   <AnimatedNumber value={data[key]} className="font-display text-3xl font-bold text-slate-900" />
                 </div>
               </div>
+              </Link>
             </ScaleOnHover>
           </StaggerItem>
-        ))}
+          );
+        })}
       </StaggerContainer>
 
       <FadeIn delay={0.3}>
@@ -130,7 +135,7 @@ export function DashboardPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <section className="glass-card">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-display text-lg font-semibold text-slate-900">{t('dashboard.actionRequired')}</h2>
+                <h2 className="font-display text-lg font-semibold text-slate-900">Application Updates</h2>
                 {(data.action_required?.length ?? 0) > 0 && (
                   <Badge variant="warning">{data.action_required.length}</Badge>
                 )}
@@ -139,15 +144,19 @@ export function DashboardPage() {
                 <p className="text-sm text-slate-500">{t('dashboard.nothingNeeded')}</p>
               ) : (
                 <ul className="space-y-3">
-                  {data.action_required.map((app, i) => (
+                  {data.action_required.map((app: any, i: number) => {
+                    const linkTo = app.status === 'info_requested'
+                      ? `/enrolment/applications/${app.id}/respond-info`
+                      : `/enrolment/applications`;
+                    return (
                     <motion.li
-                      key={app.id}
+                      key={`${app.id}-${app.school_id}`}
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 * i }}
                     >
                       <Link
-                        to={`/enrolment/applications/${app.id}/respond-info`}
+                        to={linkTo}
                         className="interactive-card flex items-center justify-between !p-3"
                       >
                         <div>
@@ -157,7 +166,8 @@ export function DashboardPage() {
                         <StatusBadge status={app.status} />
                       </Link>
                     </motion.li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </section>

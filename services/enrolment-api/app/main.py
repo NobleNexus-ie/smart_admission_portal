@@ -30,6 +30,7 @@ from app.routers import (
     school_compare,
     schools,
     staff_applications,
+    staff_school,
 )
 from app.services.storage_client import get_storage_client
 from app.utils.errors import (
@@ -102,6 +103,7 @@ app.include_router(multi_submit.router, prefix=API_PREFIX)
 app.include_router(drafts.router, prefix=API_PREFIX)
 app.include_router(applications.router, prefix=API_PREFIX)
 app.include_router(staff_applications.router, prefix=API_PREFIX)
+app.include_router(staff_school.router, prefix=API_PREFIX)
 app.include_router(chatbot.router, prefix=API_PREFIX)
 app.include_router(analytics.router, prefix=API_PREFIX)
 app.include_router(notification_preferences.router, prefix=API_PREFIX)

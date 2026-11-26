@@ -42,9 +42,32 @@ function processQueue(error: unknown, token: string | null) {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
+    if (!error.response && error.message === 'Network Error') {
+      const friendly = new Error(
+        'Unable to connect to the server. Please check your internet connection and try again.',
+      );
+      (friendly as any).isNetworkError = true;
+      return Promise.reject(friendly);
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      const friendly = new Error(
+        'The request took too long. Please try again in a moment.',
+      );
+      (friendly as any).isNetworkError = true;
+      return Promise.reject(friendly);
+    }
+
     const original = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
+
+    if (error.response?.status === 500) {
+      const friendly = new Error(
+        'Something went wrong on our end. Please try again shortly.',
+      );
+      return Promise.reject(friendly);
+    }
 
     if (error.response?.status !== 401 || original._retry) {
       return Promise.reject(error);

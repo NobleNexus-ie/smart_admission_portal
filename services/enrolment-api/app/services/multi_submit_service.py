@@ -52,28 +52,28 @@ class MultiSubmitService:
             raise AppError(400, f"Some schools are not active or do not exist: {missing}")
 
         existing = await self.db.execute(
-            select(ApplicationSchool.school_id).where(
+            select(ApplicationSchool).where(
                 ApplicationSchool.application_id == application_id,
                 ApplicationSchool.school_id.in_(school_ids),
             )
         )
-        existing_ids = {row[0] for row in existing.all()}
-        if existing_ids:
-            raise AppError(
-                400,
-                f"Application already submitted to some schools",
-            )
+        existing_map = {asch.school_id: asch for asch in existing.scalars().all()}
 
         now = datetime.now(timezone.utc)
         submitted = []
         for sid in school_ids:
-            app_school = ApplicationSchool(
-                application_id=application_id,
-                school_id=sid,
-                status=ApplicationSchoolStatus.PENDING.value,
-                submitted_at=now,
-            )
-            self.db.add(app_school)
+            if sid in existing_map:
+                asch = existing_map[sid]
+                asch.status = ApplicationSchoolStatus.PENDING.value
+                asch.submitted_at = now
+            else:
+                app_school = ApplicationSchool(
+                    application_id=application_id,
+                    school_id=sid,
+                    status=ApplicationSchoolStatus.PENDING.value,
+                    submitted_at=now,
+                )
+                self.db.add(app_school)
             submitted.append(
                 {
                     "school_id": str(sid),

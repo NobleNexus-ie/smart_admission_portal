@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
-import { Sidebar, STAFF_NAV } from './Sidebar';
+import { Sidebar, STAFF_NAV, STAFF_ADMIN_NAV } from './Sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { isAuthenticated } from '@/lib/auth';
 
@@ -13,11 +14,15 @@ export function StaffAuthGuard({ children }: { children: React.ReactNode }) {
 
 export function StaffLayout() {
   const { logout, staffUser } = useAuth();
+  const nav = useMemo(
+    () => (staffUser?.role === 'school_admin' ? STAFF_ADMIN_NAV : STAFF_NAV),
+    [staffUser?.role],
+  );
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
-        items={STAFF_NAV}
+        items={nav}
         brandSubtitle="School Staff Portal"
         userLabel={staffUser?.name || staffUser?.email}
         onLogout={logout}

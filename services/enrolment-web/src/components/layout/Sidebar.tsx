@@ -4,11 +4,12 @@ import {
   LayoutDashboard,
   GraduationCap,
   User,
+  Baby,
   ClipboardList,
   BarChart3,
   LogOut,
-  FileText,
-  Baby,
+  School,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,10 +32,9 @@ interface SidebarProps {
 
 export const PARENT_NAV: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', i18nKey: 'nav.dashboard', icon: LayoutDashboard, end: true },
-  { to: '/enrolment', label: 'Enrolment', i18nKey: 'nav.enrolment', icon: GraduationCap, end: true },
-  { to: '/enrolment/applications', label: 'My Applications', i18nKey: 'nav.myApplications', icon: FileText, end: true },
+  { to: '/enrolment', label: 'Enrolment', i18nKey: 'nav.enrolment', icon: GraduationCap, end: false },
+  { to: '/profile/children', label: 'My Children', i18nKey: 'nav.children', icon: Baby, end: false },
   { to: '/profile', label: 'Profile', i18nKey: 'nav.profile', icon: User, end: true },
-  { to: '/profile/children', label: 'Children', i18nKey: 'children.title', icon: Baby, end: true },
 ];
 
 export const STAFF_NAV: NavItem[] = [
@@ -48,6 +48,20 @@ export const STAFF_NAV: NavItem[] = [
     to: '/staff/analytics',
     label: 'Analytics',
     icon: BarChart3,
+  },
+];
+
+export const STAFF_ADMIN_NAV: NavItem[] = [
+  ...STAFF_NAV,
+  {
+    to: '/staff/settings',
+    label: 'School Settings',
+    icon: School,
+  },
+  {
+    to: '/staff/members',
+    label: 'Staff Members',
+    icon: Users,
   },
 ];
 

@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     LLM_TIMEOUT: int = 15
     LLM_MAX_RETRIES: int = 1
     CHATBOT_MAX_MESSAGES_PER_SESSION: int = 50
-    CHATBOT_MAX_SESSIONS_PER_DAY: int = 5
+    CHATBOT_MAX_SESSIONS_PER_DAY: int = 20
 
     BCRYPT_ROUNDS: int = 12
     MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024

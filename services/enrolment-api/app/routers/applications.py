@@ -25,7 +25,7 @@ async def create_application(
     current: Annotated[dict, Depends(get_current_parent)],
 ):
     return await ApplicationService(db).create(
-        parent_id_from(current), body.school_id, body.form_data
+        parent_id_from(current), body.school_id, body.form_data, method=body.method
     )
 
 

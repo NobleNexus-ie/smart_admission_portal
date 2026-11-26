@@ -49,6 +49,7 @@ SCHOOLS = [
         "facilities": ["Library", "Science Lab", "Sports Ground", "Swimming Pool", "Computer Lab"],
         "fee_range": "₹80,000 – ₹1,20,000/year",
         "grades_offered": ["Nursery", "LKG", "UKG", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"],
+        "required_documents": ["transfer_certificate", "previous_marksheet"],
     },
     {
         "name": "Ryan International School, Chennai",
@@ -64,6 +65,7 @@ SCHOOLS = [
         "facilities": ["Library", "Science Lab", "Sports Ground", "Auditorium", "Music Room"],
         "fee_range": "₹60,000 – ₹90,000/year",
         "grades_offered": ["LKG", "UKG", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10"],
+        "required_documents": ["transfer_certificate"],
     },
     {
         "name": "Kendriya Vidyalaya, Bangalore",
@@ -79,6 +81,7 @@ SCHOOLS = [
         "facilities": ["Library", "Science Lab", "Sports Ground", "Computer Lab"],
         "fee_range": "₹5,000 – ₹10,000/year",
         "grades_offered": ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"],
+        "required_documents": ["transfer_certificate", "previous_marksheet", "migration_certificate"],
     },
     {
         "name": "Presidency School, Bangalore",

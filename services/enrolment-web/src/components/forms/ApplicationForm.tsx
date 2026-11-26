@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Check, Baby } from 'lucide-react';
+import { Check, Baby, X } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
@@ -73,6 +73,7 @@ export function ApplicationForm({ schoolId, schoolName }: ApplicationFormProps) 
     queryKey: ['children'],
     queryFn: childrenApi.list,
   });
+  const [filledChildName, setFilledChildName] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [birthCert, setBirthCert] = useState<File | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
@@ -122,6 +123,7 @@ export function ApplicationForm({ schoolId, schoolName }: ApplicationFormProps) 
   }, [setValue]);
 
   function fillFromChild(child: Child) {
+    setFilledChildName(child.full_name);
     setValue('student_full_name', child.full_name);
     if (child.date_of_birth) setValue('date_of_birth', child.date_of_birth);
     if (child.gender) setValue('gender', child.gender as 'Male' | 'Female' | 'Other');
@@ -134,6 +136,20 @@ export function ApplicationForm({ schoolId, schoolName }: ApplicationFormProps) 
     }
     if (child.special_needs) setValue('special_needs', child.special_needs);
     if (child.medical_conditions) setValue('medical_conditions', child.medical_conditions);
+  }
+
+  function clearChildFill() {
+    setFilledChildName(null);
+    setValue('student_full_name', '');
+    setValue('date_of_birth', '');
+    setValue('gender', undefined as any);
+    setValue('grade_applying_for', '');
+    setValue('nationality', 'Indian');
+    setValue('previous_school_name', '');
+    setValue('previous_board', '');
+    setValue('previous_marks', null);
+    setValue('special_needs', '');
+    setValue('medical_conditions', '');
   }
 
   const nextStep = async () => {
@@ -266,18 +282,35 @@ export function ApplicationForm({ schoolId, schoolName }: ApplicationFormProps) 
                   <Baby className="h-4 w-4" />
                   Auto-fill from saved child
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {children.map((child) => (
-                    <button
-                      key={child.id}
-                      type="button"
-                      onClick={() => fillFromChild(child)}
-                      className="rounded-lg border border-brand-200 bg-white px-3 py-1.5 text-sm font-medium text-brand-700 transition hover:bg-brand-100 hover:shadow-sm"
-                    >
-                      {child.full_name}
-                    </button>
-                  ))}
-                </div>
+                {filledChildName ? (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1.5 text-sm font-medium text-brand-800 ring-1 ring-brand-200">
+                      {filledChildName}
+                      <button
+                        type="button"
+                        onClick={clearChildFill}
+                        className="rounded-full p-0.5 transition hover:bg-brand-200"
+                        aria-label="Clear auto-filled data"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                    <span className="text-xs text-slate-500">Auto-filled</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {children.map((child) => (
+                      <button
+                        key={child.id}
+                        type="button"
+                        onClick={() => fillFromChild(child)}
+                        className="rounded-lg border border-brand-200 bg-white px-3 py-1.5 text-sm font-medium text-brand-700 transition hover:bg-brand-100 hover:shadow-sm"
+                      >
+                        {child.full_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <div className="sm:col-span-2">
